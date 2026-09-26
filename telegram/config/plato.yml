@@ -1,0 +1,153 @@
+# SkyX-Arch release configuration
+# Copy this file (e.g. telegram/config/crdroid-plato.yml) to add another
+# ROM/device combination. The workflow accepts --config as an input, so
+# no code changes are needed to support new configs.
+
+rom_name: crDroid Android
+
+website:
+  url: https://skyx-arch.github.io/SkyX-Arch_ROM_site/
+  text: SkyX-Arch ROM Portal
+
+image:
+  enabled: true
+  path: telegram/assets/release_banner.png
+
+pin_message: true
+
+# -----------------------------------------------------------------------
+# known_issues is NOT pulled from the OTA json below - an OTA server has
+# no concept of "known issues", that data simply doesn't exist there.
+# This is a plain hand-maintained list: update it yourself for each release.
+# Leave the list empty ("known_issues: []") to render "• None".
+# -----------------------------------------------------------------------
+known_issues:
+  - Keep Smart Pixels disabled.
+  - X-Engine may cause white tint/washed colors on A16 (workaround in pinned post).
+  - Boot white noise after Xiaomi logo is cosmetic.
+
+# -----------------------------------------------------------------------
+# Everything below is pulled automatically from JSON files that live at
+# the REPOSITORY ROOT (plato.json, platogms.json), because they're written
+# there by another workflow/bot at release time (not by this repo's own
+# release process).
+#
+# Naming convention this workflow relies on: "plato.json" (root) pairs with
+# "telegram/config/plato.yml" (this file). When the root JSON changes, the
+# publish workflow finds this config automatically by stripping ".json"
+# and looking for "telegram/config/<name>.yml" - see .github/workflows/.
+#
+# `fields` is a MAPPING you control: the key on the left (e.g. download_url)
+# is the placeholder name used in the template/buttons ({{DOWNLOAD_URL}}).
+# The value on the right is the actual key name USED IN THIS PARTICULAR
+# json file. Different ROMs/OTA servers name things differently - e.g. one
+# calls the download link "download", another calls it "url". To adapt to
+# a different ROM's JSON, you only edit the right-hand side here, e.g.:
+#
+#     download_url: url        # instead of: download_url: download
+#
+# No changes to the Python script are ever required for this.
+# -----------------------------------------------------------------------
+sources:
+  # --- Regular (non-GApps) build -----------------------------------------
+  - path: plato.json                 # root-level JSON, updated by update-plato-json.yml
+    list_key: response                 # this file's data lives under {"response": [...]}
+    index: 0                           # use the first entry in that list
+    fields:
+      device: device                 # -> {{DEVICE}}
+      oem: oem                       # -> {{OEM}}
+      maintainer: maintainer         # -> {{MAINTAINER}}
+      filename: filename              # -> {{FILENAME}}
+
+      # NOTE: update-plato-json.yml writes the download link as "url" (not
+      # "download"), the build timestamp as "datetime" (not "timestamp"),
+      # and the MD5 hash as "id" (not "md5"). Whatever field names YOUR
+      # updater script actually writes, they must match the right-hand
+      # side below - that's the whole point of this mapping.
+      download_url: download                # -> {{DOWNLOAD_URL}}
+
+      build_date:                      # -> {{BUILD_DATE}}
+        key: timestamp
+        transform: unix_timestamp_date
+
+      size:                            # -> {{SIZE}}  (human-readable, e.g. "1.80 GB")
+        key: size
+        transform: bytes_to_human
+
+      md5:                             # -> {{MD5}}
+        key: md5
+
+      sha256: sha256                   # -> {{SHA256}}
+      buildtype: buildtype             # -> {{BUILDTYPE}}
+      forum: forum                     # -> {{FORUM}}
+      telegram_channel: telegram        # -> {{TELEGRAM_CHANNEL}}
+      firmware: firmware               # -> {{FIRMWARE}}
+      gapps: gapps                     # -> {{GAPPS}}  (link to the NikGapps project, not our own build)
+
+      # update-plato-json.yml writes "version" straight from the release
+      # tag now, so it's read directly - no filename parsing needed.
+      version: version                 # -> {{VERSION}}
+
+      # ---------------------------------------------------------------
+      # GitHub Releases-specific links, all derived from the same "url"
+      # field above (no extra data needed - owner/repo/tag are parsed
+      # straight out of it). Uses "url" here because that's the field
+      # name THIS json actually uses for the download link (see note above).
+      # ---------------------------------------------------------------
+      release_url:                     # -> {{RELEASE_URL}}, the release PAGE (not a .zip)
+        key: download
+        transform: github_release_page
+
+      boot_img_url:                    # -> {{BOOT_IMG_URL}}
+        key: download
+        transform: github_release_asset
+        arg: boot.img
+
+      vendor_img_url:                  # -> {{VENDOR_IMG_URL}}
+        key: download
+        transform: github_release_asset
+        arg: vendor_boot.img
+
+  # --- GApps build (same release, separate archive) -----------------------
+  # update-plato-json.yml (see .github/workflows/) also finds the *gapps*
+  # asset in the SAME GitHub release and writes it here, in the same
+  # {"response": [...]} shape as plato.json. `prefix: gapps_` keeps every
+  # placeholder from this source namespaced, e.g. {{GAPPS_DOWNLOAD_URL}},
+  # so it never collides with the regular build's placeholders above.
+  - path: platogms.json
+    list_key: response
+    index: 0
+    prefix: gapps_
+    fields:
+      filename: filename                # -> {{GAPPS_FILENAME}}
+      download_url: download                # -> {{GAPPS_DOWNLOAD_URL}}
+      size:                             # -> {{GAPPS_SIZE}}
+        key: size
+        transform: bytes_to_human
+      md5:
+        key: md5                         # -> {{GAPPS_MD5}}
+      sha256: sha256                     # -> {{GAPPS_SHA256}}
+
+# Buttons can reference any placeholder above, including sourced ones, so
+# every link always points at the correct build/release automatically.
+buttons:
+  - text: "📦 Release Page"
+    url: "{{RELEASE_URL}}"
+
+  - text: "📥 ROM (zip)"
+    url: "{{DOWNLOAD_URL}}"
+
+  - text: "🧬 GApps Build"
+    url: "{{GAPPS_DOWNLOAD_URL}}"
+
+  - text: "🥾 boot.img"
+    url: "{{BOOT_IMG_URL}}"
+
+  - text: "🧩 vendor_boot.img"
+    url: "{{VENDOR_IMG_URL}}"
+
+  - text: "📝 Changelog"
+    url: "https://skyx-arch.github.io/SkyX-Arch_ROM_site/?rom=crdroid-plato"
+
+  - text: "📖 Installation Guide"
+    url: "https://skyx-arch.github.io/SkyX-Arch_ROM_site/?rom=crdroid-plato"
