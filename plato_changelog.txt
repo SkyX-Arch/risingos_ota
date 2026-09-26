@@ -1,0 +1,152 @@
+Highlights & Device Specific Changes
+-----------------------------------
+Device: Xiaomi 12T (plato)
+Build type: Unofficial
+Maintainer: SkyX-Arch
+
+====================================================
+
+2026-09-23
+----------------------------------------------------
+- Updated crDroid base from 12.11 to 12.12
+- Fixed a video codec crash affecting video playback in some applications; related visual artifacts should also be resolved
+- Further improved lk.img and its patches, achieving maximum Play Integrity compatibility on custom ROMs
+- Expanded lk.img customization capabilities, opening the way for further modifications, new fastboot commands, features, and more
+- Improved the Google services integration: a separate GApps build is now available with a dedicated system updater configuration
+- The vanilla build without Google services will continue to be released as well
+And many more improvements and changes under the hood
+
+====================================================
+
+2026-07-19
+----------------------------------------------------
+- Fixed power service errors related to incorrect paths to processor cores
+- The last spaces in the bootloader have been fixed, now it transmits the status more correctly
+
+====================================================
+
+2026-07-18
+----------------------------------------------------
+- Fixed a video codec crash when viewing certain videos
+- Improved overall system responsiveness and smoothness
+- Plato's device tree structure has been completely redesigned to improve adaptability to various custom firmwares
+- The bootloader has been patched, now the system thinks that the bootloader is closed, although this is not the case
+
+====================================================
+
+2026-07-12
+----------------------------------------------------
+- General stability improvements across the system
+- Improved memory management to reduce application freezes and browser crashes
+- Enhanced graphics performance for a smoother and more responsive user experience
+- Migrated system rendering to Vulkan for improved performance and overall stability
+- Increased reliability of the under-display fingerprint sensor
+- Improved the MediaTek adaptive brightness service to prevent occasional crashes
+- Refined adaptive display brightness behavior
+- Optimized power management to reduce battery drain while the screen is off
+- Reduced occasional micro-stutters during everyday use
+- Improved battery monitoring and charging stability
+- Enhanced network reliability and resolved SSL-related connectivity issues
+- Improved Wi-Fi compatibility by disabling unsupported hardware features
+- Reduced unnecessary background logging to lower system overhead
+- Refined SELinux policies to strengthen security, improve compatibility, and enhance overall system stability
+
+
+====================================================
+
+2026-07-08
+----------------------------------------------------
+- Updating SELinux policies for audio and power management services
+- Improved battery saving service by adding necessary configs
+- Added misound stereo sound enhancer, phone sound should become clearer
+- Improved system performance by optimizing the Mediatek Dimencity 8100 Ultra processor with appropriate settings
+- Enabling processor frequency boost in certain tasks
+- Improved logic for energy-efficient processor cores by configuring the Mediatek scheduler
+- Improved system interface rendering and display image quality
+
+====================================================
+
+2026-07-05
+----------------------------------------------------
+- Improved refresh rate behavior for smoother animations and scrolling
+- Enabled advanced ZRAM and UFS performance optimizations for better multitasking
+- Enabled Zero Shutter Lag (ZSL) support for faster camera capture
+- Improved stereo speaker orientation based on screen rotation
+- Added Hi-Res audio support for USB Type-C devices
+- Added support for HDR10+ playback and improved compatibility with advanced video formats
+- Improved MediaTek APU integration, enhancing AI-related performance and efficiency
+- Updated the device fingerprint to a newer HyperOS release for improved compatibility
+- Updated SELinux policies for improved security, compatibility, and overall system stability
+- Added kernel support for SUSFS
+- Disabled Smart Pixels while using the under-display fingerprint sensor (UDFPS) to prevent display-related issues (Thanks to Archcloudy for the fix!)
+
+====================================================
+
+2026-06-26
+----------------------------------------------------
+- Improved overall system stability on MediaTek devices
+- Fixed issues that could occasionally cause crashes during media playback
+- Improved compatibility with Android 16
+- Enabled MediaTek AI-powered display enhancement features
+- Improved network reliability after boot
+- Improved overall system responsiveness and reduced occasional freezes
+- Reduced unnecessary system log spam
+- Fixed an issue where the reboot notification after an OTA update could sometimes disappear
+- Reduced unnecessary camera-related log spam 
+
+====================================================
+
+2026-06-24
+----------------------------------------------------
+- Fixed residual issues with selinux in the device tree, improving overall system stability
+- Added and adapted support for Dolby Atmos for the plato device
+- Reducing logcat spam
+
+
+====================================================
+
+2026-06-19
+----------------------------------------------------
+- Fixed screen artifacts and corrupted screenshots
+- Restored proper graphics buffer handling on Android 16
+- Improved compatibility with Android 16 linker namespace restrictions
+- Fixed memory management issues caused by cgroup permission errors
+- Fixed a race condition that could cause the System Update UI to crash when an OTA update completed while viewing the update screen
+- Optimized vendor graphics service initialization
+- Improved media decoder fallback behavior
+- Cleaned up obsolete graphics, sensor, and neural network driver symlinks
+- Reduced boot-time service initialization log spam
+- Fixed excessive Photo Picker logcat spam during boot
+- Reduced excessive logcat spam caused by periodic system memory compaction (compactSystem)
+
+====================================================
+
+2026-06-15
+----------------------------------------------------
+- Improved device wake-up handling
+- Reduced unnecessary camera-related system messages
+- Improved Wi-Fi monitoring and diagnostics
+- Fixed Wi-Fi statistics reporting
+- Improved overall Wi-Fi stability
+- Synced with latest crDroid sources
+
+====================================================
+
+2026-06-12
+----------------------------------------------------
+- Fixed Recent Apps state persistence after reboot
+- Improved Wi-Fi stability
+- Updated SELinux policies
+- Reduced boot-time log spam
+- Improved background process scheduling
+- Reduced excessive ADB logging
+- Improved power management
+- Cleaned up Audio HAL configuration
+- Synced with latest crDroid sources
+
+====================================================
+
+2026-06-10
+----------------------------------------------------
+- Integrated OTA Update support
+- Fixed minor bugs and improved stability
