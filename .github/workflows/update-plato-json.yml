@@ -1,0 +1,213 @@
+name: Update plato.json on Release
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Тег релиза, для которого нужно обновить plato.json"
+        required: true
+        type: string
+
+jobs:
+  update-plato-json:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      changed: ${{ steps.commit.outputs.changed }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Get release asset info
+        id: asset
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          RELEASE_TAG="${{ github.event.inputs.tag || github.event.release.tag_name }}"
+          REPO="${{ github.repository }}"
+
+          # Обычный (не-gapps) .zip-файл в релизе
+          ASSET_NAME=$(gh release view "$RELEASE_TAG" --json assets \
+            -q '.assets[] | select(.name | test("gapps"; "i") | not) | select(.name | endswith(".zip")) | .name' | head -n 1)
+
+          # gapps-.zip в том же релизе (может отсутствовать - не у всех ROM есть отдельная gapps-сборка)
+          GAPPS_ASSET_NAME=$(gh release view "$RELEASE_TAG" --json assets \
+            -q '.assets[] | select(.name | test("gapps"; "i")) | select(.name | endswith(".zip")) | .name' | head -n 1)
+
+          if [ -z "$ASSET_NAME" ]; then
+            echo "::error::No non-gapps .zip asset found in release $RELEASE_TAG"
+            exit 1
+          fi
+
+          ASSET_URL="https://github.com/${REPO}/releases/download/${RELEASE_TAG}/${ASSET_NAME}"
+          echo "name=$ASSET_NAME"   >> $GITHUB_OUTPUT
+          echo "url=$ASSET_URL"     >> $GITHUB_OUTPUT
+          echo "tag=$RELEASE_TAG"   >> $GITHUB_OUTPUT
+
+          if [ -n "$GAPPS_ASSET_NAME" ]; then
+            GAPPS_ASSET_URL="https://github.com/${REPO}/releases/download/${RELEASE_TAG}/${GAPPS_ASSET_NAME}"
+            echo "gapps_name=$GAPPS_ASSET_NAME" >> $GITHUB_OUTPUT
+            echo "gapps_url=$GAPPS_ASSET_URL"   >> $GITHUB_OUTPUT
+            echo "Found gapps asset: $GAPPS_ASSET_NAME"
+          else
+            echo "gapps_name="                  >> $GITHUB_OUTPUT
+            echo "gapps_url="                    >> $GITHUB_OUTPUT
+            echo "No gapps asset found in this release - platogms.json will not be updated"
+          fi
+
+      - name: Download release ZIP(s)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release download "${{ steps.asset.outputs.tag }}" \
+            --pattern "${{ steps.asset.outputs.name }}" \
+            --output release.zip
+
+          if [ -n "${{ steps.asset.outputs.gapps_name }}" ]; then
+            gh release download "${{ steps.asset.outputs.tag }}" \
+              --pattern "${{ steps.asset.outputs.gapps_name }}" \
+              --output release-gapps.zip
+          fi
+
+      - name: Compute hashes and size
+        id: hashes
+        run: |
+          echo "md5=$(md5sum release.zip | awk '{print $1}')"       >> $GITHUB_OUTPUT
+          echo "sha256=$(sha256sum release.zip | awk '{print $1}')" >> $GITHUB_OUTPUT
+          echo "size=$(stat -c%s release.zip)"                       >> $GITHUB_OUTPUT
+          echo "timestamp=$(unzip -p release.zip META-INF/com/android/metadata | grep 'post-timestamp' | cut -d'=' -f2)" >> $GITHUB_OUTPUT
+
+          if [ -f release-gapps.zip ]; then
+            echo "gapps_md5=$(md5sum release-gapps.zip | awk '{print $1}')"       >> $GITHUB_OUTPUT
+            echo "gapps_sha256=$(sha256sum release-gapps.zip | awk '{print $1}')" >> $GITHUB_OUTPUT
+            echo "gapps_size=$(stat -c%s release-gapps.zip)"                       >> $GITHUB_OUTPUT
+            echo "gapps_timestamp=$(unzip -p release-gapps.zip META-INF/com/android/metadata | grep 'post-timestamp' | cut -d'=' -f2)" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Update JSON files
+        env:
+          ASSET_NAME: ${{ steps.asset.outputs.name }}
+          ASSET_URL:  ${{ steps.asset.outputs.url }}
+          MD5:        ${{ steps.hashes.outputs.md5 }}
+          SHA256:     ${{ steps.hashes.outputs.sha256 }}
+          SIZE:       ${{ steps.hashes.outputs.size }}
+          TIMESTAMP:  ${{ steps.hashes.outputs.timestamp }}
+          TAG:        ${{ steps.asset.outputs.tag }}
+          GAPPS_ASSET_NAME: ${{ steps.asset.outputs.gapps_name }}
+          GAPPS_ASSET_URL:  ${{ steps.asset.outputs.gapps_url }}
+          GAPPS_MD5:        ${{ steps.hashes.outputs.gapps_md5 }}
+          GAPPS_SHA256:     ${{ steps.hashes.outputs.gapps_sha256 }}
+          GAPPS_SIZE:       ${{ steps.hashes.outputs.gapps_size }}
+          GAPPS_TIMESTAMP:  ${{ steps.hashes.outputs.gapps_timestamp }}
+        run: |
+          python3 - <<'PYEOF'
+          import json, os, re
+
+          def extract_version(tag):
+              # Ожидается тег вида "...-v12.11" -> "12.11"
+              match = re.search(r"-v(\d+(?:\.\d+)*)$", tag)
+              if not match:
+                  print(f"WARNING: could not extract version from tag '{tag}', leaving 'version' unchanged")
+                  return None
+              return match.group(1)
+
+
+          def update_entry_file(path, filename, url, timestamp, md5, sha256, size, version):
+              if os.path.isfile(path):
+                  with open(path, "r", encoding="utf-8") as f:
+                      data = json.load(f)
+              else:
+                  # First time this file is touched - start from an empty skeleton
+                  # with the same {"response": [{...}]} shape as plato.json.
+                  data = {"response": [{}]}
+
+              # Структура: {"response": [ {...} ]}
+              entry = data["response"][0]
+
+              entry["filename"] = filename
+              entry["download"] = url
+              entry["md5"] = md5
+              entry["sha256"] = sha256
+              entry["size"] = int(size)
+
+              if timestamp:
+                  entry["timestamp"] = int(timestamp)
+              else:
+                  print(f"WARNING: no timestamp available for {path}, leaving 'datetime' unchanged")
+
+              if version:
+                  entry["version"] = version
+
+              with open(path, "w", encoding="utf-8") as f:
+                  json.dump(data, f, indent=4, ensure_ascii=False)
+
+              print(f"{path} updated successfully")
+
+
+          version = extract_version(os.environ["TAG"])
+
+          update_entry_file(
+              "plato.json",
+              os.environ["ASSET_NAME"],
+              os.environ["ASSET_URL"],
+              os.environ["TIMESTAMP"],
+              os.environ["MD5"],
+              os.environ["SHA256"],
+              os.environ["SIZE"],
+              version,
+          )
+
+          if os.environ.get("GAPPS_ASSET_NAME"):
+              update_entry_file(
+                  "platogms.json",
+                  os.environ["GAPPS_ASSET_NAME"],
+                  os.environ["GAPPS_ASSET_URL"],
+                  os.environ["GAPPS_TIMESTAMP"],
+                  os.environ["GAPPS_MD5"],
+                  os.environ["GAPPS_SHA256"],
+                  os.environ["GAPPS_SIZE"],
+                  version,
+              )
+          else:
+              print("No gapps asset in this release - platogms.json left untouched")
+          PYEOF
+
+      - name: Commit and push JSON files
+        id: commit
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add plato.json
+          [ -f platogms.json ] && git add platogms.json
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git commit -m "chore: update plato.json/platogms.json for release ${{ steps.asset.outputs.tag }}"
+          git push
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+
+  # ---------------------------------------------------------------------
+  # Runs directly after plato.json is committed and pushed - in the SAME
+  # workflow run, as a dependent job. This guarantees the Telegram post is
+  # generated from the JUST-UPDATED plato.json (no race condition), and
+  # side-steps the GitHub Actions rule that a push made with the default
+  # GITHUB_TOKEN does NOT trigger other workflows via "on: push" - calling
+  # the reusable workflow directly here avoids relying on that entirely.
+  # Only runs if plato.json actually changed (skips on "No changes").
+  # ---------------------------------------------------------------------
+  publish-telegram-post:
+    needs: update-plato-json
+    if: needs.update-plato-json.outputs.changed == 'true'
+    uses: ./.github/workflows/_publish-telegram-post.yml
+    with:
+      config_path: telegram/config/plato.yml
+      ref: main
+    secrets: inherit

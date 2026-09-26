@@ -1,0 +1,45 @@
+name: Telegram Release Publisher (manual test run)
+
+# ---------------------------------------------------------------------------
+# This workflow is now ONLY for manually testing the publish pipeline for
+# any given config - e.g. to check the pipeline itself, or to re-send a
+# post without re-running the OTA-json update.
+#
+# The real automatic path is NOT here anymore. It lives directly inside
+# each device's own "update-<device>-json.yml" workflow (e.g.
+# update-plato-json.yml): after that workflow commits the fresh JSON, it
+# calls _publish-telegram-post.yml itself, in the same run, as a dependent
+# job. Two reasons this workflow doesn't try to watch for that automatically:
+#
+#   1. A push made with the default GITHUB_TOKEN (which is what those
+#      update workflows use to commit) does NOT trigger other workflows via
+#      "on: push" - that's a deliberate GitHub Actions anti-recursion rule.
+#      Watching for the push here would simply never fire.
+#   2. Listening to "release: published" here as well (in addition to the
+#      device workflow that also listens to it) caused two workflow runs to
+#      fire in parallel with no ordering guarantee - the post could easily
+#      be generated from the OLD JSON, seconds before the update workflow
+#      committed the new one.
+#
+# Calling the reusable workflow directly from within update-plato-json.yml
+# (see that file) avoids both problems entirely.
+# ---------------------------------------------------------------------------
+
+on:
+  workflow_dispatch:
+    inputs:
+      config_path:
+        description: "Path to release config YAML to publish"
+        required: false
+        default: "telegram/config/plato.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    uses: ./.github/workflows/_publish-telegram-post.yml
+    with:
+      config_path: ${{ github.event.inputs.config_path || 'telegram/config/plato.yml' }}
+      ref: main
+    secrets: inherit
