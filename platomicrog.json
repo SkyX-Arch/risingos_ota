@@ -1,0 +1,28 @@
+{
+    "response": [
+        {
+            "maintainer": "SkyX-Arch",
+            "oem": "Xiaomi",
+            "device": "Xiaomi 12TM",
+            "filename": "crDroidAndroid-16.0-20260923-platoGAPPS-v12.12.zip",
+            "download": "https://pixeldrain.com/api/file/sCj8xdtQ?download",
+            "timestamp": 1790149586,
+            "md5": "2b99c052ca04dcee9f74766326471b97",
+            "sha256": "6bf3a6b56471918ab54ae107bbaef6a89ab01c5a26640be8b0a99c1bf8512f1e",
+            "size": 2158487228,
+            "version": "9-elefthería",
+            "buildtype": "Unofficial",
+            "forum": "https://github.com/SkyX-Arch/risingos_ota",
+            "gapps": "",
+            "firmware": "https://xmfirmwareupdater.com/firmware/plato/stable/OS2.0.214.0.VLQMIXM/",
+            "modem": "",
+            "bootloader": "",
+            "recovery": "",
+            "paypal": "",
+            "telegram": "https://t.me/SkyXArch",
+            "dt": "https://github.com/SkyX-Arch/android_device_xiaomi_plato",
+            "common-dt": "https://github.com/SkyX-Arch/android_device_xiaomi_mt6895-common",
+            "kernel": "https://github.com/XagaForge/android_kernel_xiaomi_mt6895"
+        }
+    ]
+}
